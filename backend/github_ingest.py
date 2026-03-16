@@ -3,11 +3,13 @@
 # =============================================================================
 # Phase: 2 - Backend Core Components
 # Purpose: Fetch content from GitHub repo and prepare for vectorization
-# Version: 2.0.0
+# Version: 2.0.0 (Updated to use ZIP download to avoid rate limits)
 # =============================================================================
 
 import requests
 import re
+import io
+import zipfile
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import logging
@@ -48,12 +50,16 @@ class GitHubIngestor:
                   (uses config default if None)
         """
         self.repo = repo or settings.github_repo
+        self.github_token = settings.github_token
         self.base_url = "https://api.github.com"
         
-        # Set up headers for API requests (no auth needed for public repos)
+        # Set up headers for API requests
+        # Token increases rate limit from 60 to 5000 requests/hour
         self.headers = {
             "Accept": "application/vnd.github.v3+json"
         }
+        if self.github_token:
+            self.headers["Authorization"] = f"token {self.github_token}"
     
     def _make_request(self, endpoint: str) -> Dict[str, Any]:
         """

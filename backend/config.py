@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     # Note: Token not required for public repositories
     # Token only needed for private repos or higher rate limits
     github_repo: str = os.getenv("GITHUB_REPO", "")
+    github_token: str = os.getenv("GITHUB_TOKEN", "")  # Optional: for higher rate limits
     
     # =============================================================================
     # GOOGLE CLOUD PLATFORM CONFIGURATION
