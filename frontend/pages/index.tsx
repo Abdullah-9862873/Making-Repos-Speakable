@@ -12,7 +12,7 @@ import QuestionInput from '../components/QuestionInput';
 import ResponseDisplay from '../components/ResponseDisplay';
 import VoiceInput from '../components/VoiceInput';
 import FileUpload from '../components/FileUpload';
-import apiService, { AskResponse, HealthResponse } from '../lib/api';
+import apiService, { AskResponse, HealthResponse } from '@/lib/api';
 import styles from '../styles/Home.module.css';
 
 type Mode = 'repo' | 'single-file';
