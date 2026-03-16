@@ -22,6 +22,9 @@ An AI-powered tutor that transforms any GitHub programming course into an intera
 
 ## Deployment
 
+### GitHub Repository
+- **URL**: https://github.com/Abdullah-9862873/Gemini-Live-Agent-Challenge
+
 ### Backend - Hugging Face Spaces
 - **URL**: https://abdullah9862873-gemini-live-agent-challenge.hf.space
 - **Platform**: Hugging Face Spaces (Docker)
