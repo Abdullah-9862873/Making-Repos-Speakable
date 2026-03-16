@@ -1,9 +1,9 @@
 # =============================================================================
 # AI Multimodal Tutor - Main Application Entry Point
 # =============================================================================
-# Phase: 4 - LLM Integration (COMPLETE)
+# Phase: 7 - Integration & Testing (COMPLETE)
 # Purpose: FastAPI backend with LLM-powered Q&A
-# Version: 4.0.0
+# Version: 7.0.0
 #
 # Endpoints:
 #   - GET  /health         : Health check
@@ -16,14 +16,26 @@
 #   - GET  /ingest/status  : Get ingestion status
 # =============================================================================
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 import logging
 import os
+import requests
+import uvicorn
 from dotenv import load_dotenv
+
+# Local imports
+from config import settings, validate_all_configs
+from ingestion_pipeline import ingestion_pipeline
+from vector_db import vector_db
+from rag_pipeline import RAGPipeline, check_context_available
+from llm_chain import LLMChain
+from multimodal import MultimodalGenerator
+from tts_service import TTSService
+from single_file import single_file_processor
 
 # Load environment variables
 load_dotenv()
@@ -65,15 +77,28 @@ app = FastAPI(
 )
 
 # =============================================================================
-# CORS CONFIGURATION
+# CORS CONFIGURATION (Phase 7 - Updated for Production)
 # =============================================================================
 
 # Get frontend URL from environment (default: localhost:3000)
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+# Allow multiple origins for development and production
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    frontend_url,
+]
+
+# Add production URLs if specified
+production_url = os.getenv("PRODUCTION_URL")
+if production_url:
+    allowed_origins.append(production_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -92,11 +117,11 @@ async def root():
     """
     return {
         "name": "AI Multimodal Tutor API",
-        "version": "4.0.0",
+        "version": "7.0.0",
         "status": "running",
-        "phase": "Phase 4: LLM Integration Complete",
+        "phase": "Phase 7: Integration & Testing",
         "docs": "/docs",
-        "message": "Welcome to AI Multimodal Tutor! Phases 5-8 pending."
+        "message": "AI Multimodal Tutor - GitHub Repo & Single File Q&A"
     }
 
 
@@ -110,8 +135,8 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "phase": "Phase 4: LLM Integration",
-        "version": "4.0.0",
+        "phase": "Phase 7: Integration & Testing",
+        "version": "7.0.0",
         "components": {
             "fastapi": "running",
             "pinecone": "configured",
@@ -200,8 +225,6 @@ async def validate_repo(request: ValidateRepoRequest):
             "stars": 123456
         }
     """
-    import requests as httpx
-    
     repo = request.repo.strip()
     
     # Clean up repo URL if user paste full URL
@@ -220,7 +243,7 @@ async def validate_repo(request: ValidateRepoRequest):
     
     # Try to fetch repo info from GitHub
     try:
-        response = httpx.get(
+        response = requests.get(
             f"https://api.github.com/repos/{owner}/{name}",
             headers={"Accept": "application/vnd.github.v3+json"},
             timeout=10
@@ -296,9 +319,6 @@ async def ingest_course(request: Optional[IngestRequest] = None):
             "extensions": [".md", ".py", ".js"]
         }
     """
-    from ingestion_pipeline import ingestion_pipeline
-    from config import settings, validate_all_configs
-    
     logger.info("Ingestion request received")
     
     # Validate configurations
@@ -360,9 +380,6 @@ async def get_ingestion_status():
     
     Returns information about the Vector DB index and last ingestion.
     """
-    from vector_db import vector_db
-    from config import settings
-    
     try:
         stats = vector_db.get_index_stats()
         
@@ -423,17 +440,14 @@ async def ask_question(request: AskRequest):
     """
     Ask a text question
     
-    Phase: 3-4 (RAG Pipeline + LLM Integration)
+    Phase: 4 (LLM Integration)
     
     Processes a text question using the RAG pipeline to retrieve
     relevant context from the course material, then generates
     an answer grounded in the course content.
     
     Args:
-        question: The user's question
-        top_k: Number of context results (optional, uses config default)
-        threshold: Similarity threshold (optional, uses config default)
-        prompt_type: Type of prompt (default, code, step_by_step)
+        request: AskRequest with question and optional parameters
     
     Returns:
         AskResponse with answer and context information
@@ -446,9 +460,6 @@ async def ask_question(request: AskRequest):
             "threshold": 0.7
         }
     """
-    from rag_pipeline import RAGPipeline, check_context_available
-    from config import validate_all_configs
-    
     logger.info(f"Question received: {request.question}")
     
     # Validate configurations
@@ -477,17 +488,11 @@ async def ask_question(request: AskRequest):
     
     try:
         # Validate Gemini API
-        configs = validate_all_configs()
         if not configs["gemini"]:
             raise HTTPException(
                 status_code=400,
                 detail="Gemini API key not configured"
             )
-        
-        # Import LLM chain
-        from llm_chain import LLMChain
-        from multimodal import MultimodalGenerator
-        from tts_service import TTSService
         
         # Run RAG + LLM to get answer
         llm = LLMChain()
@@ -565,8 +570,6 @@ async def rag_query(
     Returns:
         RAG pipeline results with contexts
     """
-    from rag_pipeline import RAGPipeline
-    
     try:
         rag = RAGPipeline(top_k=top_k, threshold=threshold)
         result = rag.run(query=query)
@@ -593,10 +596,6 @@ async def rag_query(
 # SINGLE FILE ENDPOINTS (Phase 6 - IMPLEMENTED)
 # =============================================================================
 
-from typing import Annotated
-from fastapi import UploadFile, File, Form
-
-
 @app.post("/ingest/single", tags=["Ingestion"])
 async def ingest_single_file(
     file: UploadFile = File(...)
@@ -615,8 +614,6 @@ async def ingest_single_file(
     Returns:
         Processing results
     """
-    from single_file import single_file_processor
-    
     try:
         # Read file content
         content = await file.read()
@@ -673,10 +670,6 @@ async def ask_about_single_file(
     Returns:
         Answer based on single file content
     """
-    from single_file import single_file_processor
-    from llm_chain import LLMChain
-    from multimodal import MultimodalGenerator
-    
     logger.info(f"Single file question: {question}")
     
     try:
@@ -750,8 +743,6 @@ async def clear_single_file():
     
     Removes all vectors stored from single file uploads.
     """
-    from single_file import single_file_processor
-    
     try:
         result = single_file_processor.clear_single_file()
         return result
@@ -810,7 +801,7 @@ async def global_exception_handler(request, exc):
         content={
             "error": "Internal Server Error",
             "message": str(exc),
-            "phase": "Phase 3"
+            "phase": "Phase 7"
         }
     )
 
@@ -820,8 +811,6 @@ async def global_exception_handler(request, exc):
 # =============================================================================
 
 if __name__ == "__main__":
-    import uvicorn
-    
     host = os.getenv("BACKEND_HOST", "0.0.0.0")
     port = int(os.getenv("BACKEND_PORT", "8000"))
     
