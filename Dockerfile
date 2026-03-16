@@ -1,7 +1,7 @@
 # =============================================================================
 # AI Multimodal Tutor - Dockerfile (for Hugging Face Spaces)
 # =============================================================================
-# Phase: 8 - Deployment
+# Phase: 8 - Deployment (Updated)
 # Purpose: Docker configuration for Hugging Face Spaces deployment
 # =============================================================================
 
