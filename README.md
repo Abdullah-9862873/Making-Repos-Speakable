@@ -19,3 +19,20 @@ An AI-powered tutor that transforms any GitHub programming course into an intera
 - Smart Responses - AI-generated answers grounded in course material
 - Code Highlighting - Beautiful syntax-highlighted code examples
 - Voice Output - Listen to answers via Text-to-Speech
+
+## Deployment
+
+### Backend - Hugging Face Spaces
+- **URL**: https://abdullah9862873-gemini-live-agent-challenge.hf.space
+- **Platform**: Hugging Face Spaces (Docker)
+- **Environment Variables**:
+  - PINECONE_API_KEY
+  - GEMINI_API_KEY
+  - PINECONE_INDEX_NAME = course-vectors
+  - PINECONE_ENVIRONMENT = us-east-1
+
+### Frontend - Vercel
+- **URL**: (Coming soon)
+- **Platform**: Vercel (Next.js)
+- **Environment Variables**:
+  - NEXT_PUBLIC_API_URL = https://abdullah9862873-gemini-live-agent-challenge.hf.space
