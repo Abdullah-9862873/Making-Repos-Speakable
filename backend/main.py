@@ -330,14 +330,17 @@ async def ingest_course(request: Optional[IngestRequest] = None):
             status_code=400,
             detail="Pinecone API key not configured"
         )
-    if not configs["github"]:
-        raise HTTPException(
-            status_code=400,
-            detail="GitHub token or repo not configured"
-        )
     
     # Get repo from request or use default
     repo = request.repo if request and request.repo else settings.github_repo
+    
+    # Check if we have a repo to ingest (either from request or env)
+    if not repo:
+        raise HTTPException(
+            status_code=400,
+            detail="GitHub repo not provided. Please provide a repo in the request body or set GITHUB_REPO environment variable"
+        )
+    
     extensions = request.extensions if request and request.extensions else [".md", ".txt", ".py", ".js", ".ts"]
     
     logger.info(f"Starting ingestion for repo: {repo}")
