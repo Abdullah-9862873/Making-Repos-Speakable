@@ -74,9 +74,13 @@ class IngestionPipeline:
         """
         logger.info("=" * 50)
         logger.info("Starting ingestion pipeline")
+        logger.info(f"Repository: {repo}")
         logger.info("=" * 50)
         
         try:
+            # Set repo for github ingestor
+            self.github.repo = repo or settings.github_repo
+            logger.info(f"Using repo: {self.github.repo}")
             # Step 1: Fetch and chunk repository content
             logger.info("Step 1: Fetching repository content...")
             chunks = self.github.fetch_and_chunk_repo(extensions=extensions)
