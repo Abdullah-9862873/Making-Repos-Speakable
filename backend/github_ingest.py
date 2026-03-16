@@ -330,11 +330,13 @@ class GitHubIngestor:
         for branch in branches:
             zip_url = f"https://github.com/{self.repo}/archive/refs/heads/{branch}.zip"
             logger.info(f"Trying branch: {branch}")
-            response = requests.get(zip_url, stream=True, timeout=60)
+            response = requests.get(zip_url, stream=True, timeout=60, allow_redirects=True)
             
             if response.status_code == 200:
                 logger.info(f"Successfully downloaded ZIP from {branch} branch")
                 break
+            else:
+                logger.warning(f"Branch {branch} returned status {response.status_code}")
         else:
             raise Exception(f"Could not download repository {self.repo} - no valid branch found")
         
