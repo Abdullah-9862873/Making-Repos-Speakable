@@ -1,315 +1,430 @@
-AI Multimodal Tutor - Implementation Plan
-=========================================
+# 🤖 AI Multimodal Tutor
 
-Project Overview
-----------------
-AI Multimodal Tutor transforms a GitHub programming course into a live AI-powered 
-tutor using Vector DB + RAG + Gemini LLM with multimodal interaction (text, voice, 
-code/images).
+<div align="center">
 
-================================================================================
-Phase 1: Project Setup & Infrastructure (Day 1 - Morning)
-================================================================================
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a859?logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=next.js)](https://nextjs.org)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-1. Create project directory structure
-   ai-tutor-hackathon/
-   ├── backend/
-   │   ├── main.py
-   │   ├── rag_pipeline.py
-   │   ├── github_ingest.py
-   │   ├── vector_db.py
-   │   ├── llm_chain.py
-   │   ├── multimodal.py
-   │   └── requirements.txt
-   ├── frontend/
-   │   ├── components/
-   │   ├── pages/
-   │   ├── hooks/
-   │   ├── styles/
-   │   └── package.json
-   ├── scripts/
-   │   ├── deploy_gcp.sh
-   │   └── ingest_course.sh
-   ├── docker/
-   │   ├── Dockerfile
-   │   └── .dockerignore
-   ├── .env.example
-   └── README.md
+**An AI-powered tutor that transforms any GitHub programming course into an interactive learning assistant**
 
-2. Initialize Git repository
-   - Run git init
-   - Create .gitignore (Python, Node, Docker)
+</div>
 
-3. Set up virtual environment
-   python -m venv venv
-   source venv/bin/activate  # or venv\Scripts\activate on Windows
-   pip install -r backend/requirements.txt
+---
 
-4. Configure environment variables (.env)
-   PINECONE_API_KEY=your_pinecone_key
-   PINECONE_ENVIRONMENT=us-east-1
-   GEMINI_API_KEY=your_gemini_key
-   GITHUB_REPO=owner/repo-name
-   # Note: No GitHub token required for public repositories
-   GOOGLE_CLOUD_PROJECT=your-gcp-project
+## 📚 Overview
 
-5. Set up Google Cloud
-   - Create GCP project
-   - Enable APIs: Cloud Run, Container Registry, Vertex AI
-   - Install Google Cloud SDK
+AI Multimodal Tutor is a hackathon project that transforms a GitHub programming course into a live AI-powered tutor. Students can ask questions via **text**, **voice**, or **upload code/screenshots**, and the AI instantly retrieves explanations directly from the course content using **Vector Database + RAG + Gemini LLM**.
 
-6. Create Docker configuration
-   - backend/Dockerfile
-   - docker-compose.yml for local dev
+### Key Features
 
-================================================================================
-Phase 2: Backend - Core Components (Day 1 - Afternoon)
-================================================================================
+- 🔗 **GitHub Repo Input** - Enter any public repo URL to learn from it
+- ✅ **Public/Private Validation** - Automatically checks if repo is public
+- 🗣️ **Voice Input** - Speak your questions directly
+- 📝 **Text Input** - Type detailed questions
+- 📎 **Single File Upload** - Upload specific file to ask about it only
+- 💬 **Smart Responses** - AI-generated answers grounded in course material
+- 🎨 **Code Highlighting** - Beautiful syntax-highlighted code examples
+- 🔊 **Voice Output** - Listen to answers via Text-to-Speech
+- 📖 **Source Tracking** - See which course materials were used
 
-1. Set up FastAPI with basic endpoints
-   - POST /ask - Text question
-   - POST /ask/voice - Voice input
-   - POST /ask/upload - Code/image upload
-   - GET /health - Health check
-   - POST /ingest - Trigger course ingestion
+---
 
-2. Implement vector_db.py
-   - Pinecone connection setup
-   - Index creation/management
-   - upsert, query, delete operations
-   - Metadata structure design
+## 🛠️ Tech Stack
 
-3. Implement github_ingest.py
-   - Fetch repo content via GitHub API
-   - Content parsing (Markdown, code files)
-   - Chunking strategy (by headers, paragraphs, code blocks)
-   - Metadata extraction (topic, file path, line numbers)
+| Layer | Technology |
+|-------|------------|
+| **Backend** | Python 3.11+, FastAPI, Uvicorn |
+| **Vector Database** | Pinecone |
+| **LLM** | Google Gemini Pro |
+| **Embeddings** | Sentence-Transformers (all-MiniLM-L6-v2) |
+| **Frontend** | React 18, Next.js 14, TypeScript |
+| **Voice** | Web Speech API, gTTS |
+| **Deployment** | Docker, Google Cloud Run |
 
-4. Implement embedding model integration
-   - Use sentence-transformers or Google Embeddings API
-   - Batch embedding generation for efficiency
+---
 
-5. Test Vector DB ingestion
-   - Ingest sample course content
-   - Verify search returns relevant results
+## 🚀 How It Works
 
-================================================================================
-Phase 3: RAG Pipeline (Day 2 - Morning)
-================================================================================
+### Mode 1: GitHub Repository (Main Feature)
 
-1. Implement rag_pipeline.py
-   - Query preprocessing
-   - Generate query embedding
-   - Vector DB similarity search (top-k=3-5)
-   - Context assembly from matches
+```
+1. Enter GitHub Repo URL (e.g., microsoft/vscode)
+2. Validate: Public or Private?
+   - If Private → Show error "Please enter a public repository"
+   - If Public → Enable "Ingest This Repo" button
+3. Click "Ingest This Repo"
+4. Files fetched, chunked, embedded, stored in Pinecone
+5. Ask questions via text or voice
+6. Get AI answers grounded in YOUR repo content!
+```
 
-2. Add metadata filtering
-   - Filter by topic/category
-   - Filter by file type
-   - Support for date-based filtering
+### Mode 2: Single File (Optional)
 
-3. Implement fallback logic
-   - If no relevant context found (score < threshold)
-   - Fall back to general Gemini knowledge
-   - Flag responses as "general" vs "course-grounded"
+```
+1. Upload a single file (e.g., main.py)
+2. Ask questions about ONLY that file
+3. Get answers specific to that file!
+```
 
-4. Test RAG pipeline
-   - End-to-end: question -> embedding -> search -> context
-   - Verify context relevance
+---
 
-================================================================================
-Phase 4: LLM Integration (Day 2 - Afternoon)
-================================================================================
+## 📁 Project Structure
 
-1. Configure Gemini API
-   - Set up google.generativeai
-   - Choose model (gemini-pro, gemini-pro-vision)
+```
+ai-tutor-hackathon/
+├── backend/                      # FastAPI backend
+│   ├── main.py                 # Application entry point
+│   ├── config.py               # Configuration management
+│   ├── vector_db.py            # Pinecone operations
+│   ├── embeddings.py           # Sentence-transformer embeddings
+│   ├── github_ingest.py        # GitHub content fetching
+│   ├── ingestion_pipeline.py   # Complete ingestion workflow
+│   ├── rag_pipeline.py          # RAG retrieval pipeline
+│   ├── prompt_templates.py      # LLM prompt templates
+│   ├── llm_chain.py            # Gemini LLM integration
+│   ├── multimodal.py            # Multimodal output generator
+│   ├── tts_service.py          # Text-to-Speech service
+│   └── requirements.txt        # Python dependencies
+│
+├── frontend/                     # Next.js frontend
+│   ├── components/
+│   │   ├── QuestionInput.tsx   # Text question input
+│   │   ├── ResponseDisplay.tsx # AI response display
+│   │   ├── VoiceInput.tsx      # Voice recording
+│   │   └── FileUpload.tsx      # File upload
+│   ├── lib/
+│   │   └── api.ts             # API service layer
+│   ├── pages/
+│   │   ├── _app.tsx           # App wrapper
+│   │   └── index.tsx          # Main page
+│   ├── styles/                  # CSS modules
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── docker/
+│   ├── Dockerfile              # Backend container
+│   └── .dockerignore
+│
+├── .env                         # Environment variables
+├── .env.example                # Environment template
+├── README.md                   # This file
+└── RUNNING.md                  # Running instructions
+```
 
-2. Build prompt templates
-   - System prompt with course context instructions
-   - User prompt with question + retrieved context
-   - Format for code examples
-   - Format for step-by-step explanations
+---
 
-3. Implement llm_chain.py
-   - Combine RAG context with prompt
-   - Call Gemini API
-   - Parse and return response
-   - Error handling and retries
+## 📋 Phases Implementation
 
-4. Add multimodal output generation
-   - Code snippet formatting (markdown/code blocks)
-   - Diagram generation prompts for Gemini
-   - Structure response: text + code + diagram reference
+### ✅ Phase 1: Project Setup & Infrastructure
 
-5. Integrate TTS for voice output
-   - Use Google Cloud Text-to-Speech API
-   - Convert response text to audio
-   - Return audio URL or base64
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Set up project structure, virtual environment, Docker, and environment variables |
+| **Technologies** | Python 3.11, Docker, pip |
+| **Language** | Python (backend), JSON (config) |
+| **Files Created** | `backend/requirements.txt`, `docker/Dockerfile`, `.env.example` |
 
-================================================================================
-Phase 5: Frontend Development (Day 3)
-================================================================================
+**Testing Phase 1:**
+```bash
+# Verify Python environment
+python --version
 
-1. Initialize Next.js/React project
-   npx create-next-app@latest frontend
-   # or
-   npm create vite@latest frontend -- --template react
+# Check installed packages
+pip list
+```
 
-2. Build UI components
-   - QuestionInput.tsx - Text input form
-   - VoiceInput.tsx - Voice recording button
-   - FileUpload.tsx - Code/screenshot upload
-   - ResponseDisplay.tsx - Show answers
-   - CodeBlock.tsx - Syntax highlighted code
-   - DiagramView.tsx - Display generated images
+---
 
-3. Implement API calls
-   - Axios/Fetch wrapper for FastAPI endpoints
-   - Request/response handling
-   - Error states
+### ✅ Phase 2: Backend Core Components
 
-4. Add loading & error handling
-   - Loading spinners during API calls
-   - Error messages for failed requests
-   - Retry logic
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Implement Vector DB connection, GitHub ingestion, and embedding generation |
+| **Technologies** | Pinecone, Sentence-Transformers, GitHub API |
+| **Language** | Python |
+| **Files Created** | `config.py`, `vector_db.py`, `embeddings.py`, `github_ingest.py`, `ingestion_pipeline.py` |
 
-5. Style with responsive design
-   - CSS modules or Tailwind CSS
-   - Mobile-friendly layout
+**API Endpoints:**
+- `POST /validate-repo` - Validate GitHub repo (public/private) - **NEW**
+- `POST /ingest` - Ingest GitHub repository
+- `GET /ingest/status` - Get ingestion status
+- `POST /ingest/single` - Ingest single file - **NEW**
 
-================================================================================
-Phase 6: Multimodal I/O Features (Day 4 - Morning)
-================================================================================
+**Testing Phase 2:**
+```bash
+# Start backend
+cd backend && uvicorn main:app --reload
 
-1. Implement voice input
-   - Web Speech API (SpeechRecognition)
-   - Fallback for browsers without support
-   - Visual feedback during recording
+# Validate a repository
+curl -X POST "http://localhost:8000/validate-repo" \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "microsoft/vscode"}'
 
-2. Implement voice output
-   - Play received TTS audio
-   - Playback controls (play/pause)
+# Ingest a public repository
+curl -X POST "http://localhost:8000/ingest" \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "microsoft/vscode", "extensions": [".md", ".py"]}'
 
-3. Add code syntax highlighting
-   - Use Prism.js or highlight.js
-   - Support multiple languages
+# Check status
+curl http://localhost:8000/ingest/status
+```
 
-4. Implement diagram/image display
-   - Parse Gemini image responses
-   - Display in modal or inline
-   - Download option
+---
 
-5. Handle file uploads
-   - Accept code snippets (.py, .js, .java, etc.)
-   - Accept screenshots (png, jpg)
-   - Preview before sending
+### ✅ Phase 3: RAG Pipeline
 
-================================================================================
-Phase 7: Integration & Testing (Day 4 - Afternoon)
-================================================================================
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Implement retrieval-augmented generation pipeline with similarity search |
+| **Technologies** | Pinecone, Custom RAG implementation |
+| **Language** | Python |
+| **Files Created** | `rag_pipeline.py`, `prompt_templates.py` |
 
-1. Connect frontend to backend
-   - CORS configuration in FastAPI
-   - API endpoint testing
+**Features:**
+- Query preprocessing
+- Vector similarity search
+- Metadata filtering
+- Context assembly
 
-2. End-to-end flow testing
-   - Full user journey: ask -> retrieve -> respond
-   - Verify multimodal outputs
+**Testing Phase 3:**
+```bash
+# Test RAG query (raw context)
+curl -X POST "http://localhost:8000/rag/query?query=What%20is%20merge%20sort&top_k=3"
+```
 
-3. Performance optimization
-   - Lazy loading for images
-   - Caching responses
-   - Optimize embedding generation
+---
 
-4. Edge case handling
-   - Empty questions
-   - Very long questions
-   - No matching context
-   - API rate limits
+### ✅ Phase 4: LLM Integration
 
-5. User acceptance testing
-   - Test with sample questions
-   - Gather feedback
-   - Fix issues
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Integrate Gemini LLM for generating course-grounded answers |
+| **Technologies** | Google Gemini Pro, google-generativeai |
+| **Language** | Python |
+| **Files Created** | `llm_chain.py`, `multimodal.py`, `tts_service.py` |
 
-================================================================================
-Phase 8: Deployment & Demo (Day 5)
-================================================================================
+**Features:**
+- RAG + LLM answer generation
+- Code block extraction
+- Source tracking
+- Voice output (TTS)
 
-1. Build Docker image
-   docker build -t ai-tutor-backend ./backend
-   docker build -t ai-tutor-frontend ./frontend
+**Testing Phase 4:**
+```bash
+# Ask a question
+curl -X POST "http://localhost:8000/ask" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is merge sort?", "top_k": 5}'
+```
 
-2. Push to Google Container Registry
-   docker tag ai-tutor-backend gcr.io/PROJECT/ai-tutor-backend
-   docker push gcr.io/PROJECT/ai-tutor-backend
+---
 
-3. Deploy to Cloud Run
-   gcloud run deploy ai-tutor-backend --image gcr.io/PROJECT/ai-tutor-backend
+### ✅ Phase 5: Frontend Development
 
-4. Record demo video (<4 minutes)
-   - Show voice input: "Explain quick sort"
-   - Show Vector DB search
-   - Show multimodal response (text + code + diagram + voice)
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Build responsive React/Next.js UI with all input/output methods |
+| **Technologies** | React 18, Next.js 14, TypeScript, CSS Modules |
+| **Language** | TypeScript, CSS |
+| **Files Created** | `components/*`, `pages/*`, `styles/*`, `lib/api.ts` |
 
-5. Prepare Devpost submission
-   - Write project description
-   - Upload screenshots/video
-   - Add deployment links
+**Features:**
+- Clean modern UI
+- Question input with keyboard shortcuts
+- Voice input button
+- File upload for code/screenshots
+- Response display with syntax highlighting
+- Connection status indicator
 
-6. Final testing & bug fixes
-   - Smoke tests on deployed version
-   - Fix any critical issues
+**Testing Phase 5:**
+```bash
+# Start frontend
+cd frontend
+npm install
+npm run dev
 
-================================================================================
-Technical Dependencies
-================================================================================
+# Open http://localhost:3000
+```
 
-Backend (Python):
-- fastapi
-- uvicorn
-- pinecone-client
-- google-generativeai
-- python-dotenv
-- requests
-- sentence-transformers
-- google-cloud-texttospeech
+---
 
-Frontend (JavaScript/React):
-- next or react
-- axios
-- prismjs
-- react-syntax-highlighter
+### ⏳ Phase 6: Multimodal I/O Features
 
-Infrastructure:
-- Google Cloud Platform
-- Cloud Run
-- Container Registry
-- Pinecone Vector DB
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Complete voice I/O, diagram display, and advanced file handling |
+| **Technologies** | Web Speech API, gTTS |
+| **Language** | TypeScript, JavaScript |
 
-================================================================================
-API Endpoints Summary
-================================================================================
+**Features (In Progress):**
+- Enhanced voice input
+- Voice output playback
+- Image/diagram display
+- Advanced file uploads
 
-Method  Endpoint      Description
-------  ---------     -------------
-GET     /health       Health check
-POST    /ask          Text question
-POST    /ask/voice    Voice question (audio)
-POST    /ask/upload   Code/image upload
-POST    /ingest       Trigger course ingestion
-GET     /history      Get session history
+---
 
-================================================================================
-Success Criteria
-================================================================================
-[ ] Vector DB populated with course content
-[ ] RAG returns relevant context for queries
-[ ] Gemini generates grounded, course-specific answers
-[ ] Frontend accepts text, voice, and file inputs
-[ ] Response includes text, code, and optional diagram/audio
-[ ] Deployed on Google Cloud Run
-[ ] Working demo video recorded
+### ⏳ Phase 7: Integration & Testing
 
-================================================================================
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Connect frontend to backend and perform end-to-end testing |
+| **Technologies** | All integrated |
+| **Language** | Full stack |
+
+---
+
+### ⏳ Phase 8: Deployment & Demo
+
+| Attribute | Details |
+|-----------|---------|
+| **Aim** | Deploy to Google Cloud Run and prepare demo |
+| **Technologies** | Docker, Google Cloud Run, GCP |
+| **Language** | Shell, YAML |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- Pinecone API Key
+- Gemini API Key
+
+### 1. Clone & Setup
+
+```bash
+git clone <your-repo-url>
+cd ai-tutor-hackathon
+```
+
+### 2. Configure Environment
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```env
+PINECONE_API_KEY=your_pinecone_key
+GEMINI_API_KEY=your_gemini_key
+GITHUB_REPO=owner/repository-name
+```
+
+Get keys:
+- **Pinecone**: https://app.pinecone.io/
+- **Gemini**: https://aistudio.google.com/app/apikey
+
+### 3. Run Backend
+
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate (Windows)
+venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+pip install gtts
+
+# Run server
+uvicorn main:app --reload
+```
+
+Backend runs at: http://localhost:8000
+
+### 4. Run Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend runs at: http://localhost:3000
+
+### 5. Use the App
+
+1. Open http://localhost:3000
+2. Click **"📥 Ingest Course"** to load a GitHub repo
+3. Ask questions using text or voice!
+
+---
+
+## 📖 API Documentation
+
+Once the backend is running, visit:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+### Available Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/` | API information |
+| POST | `/validate-repo` | Validate GitHub repo (public/private) |
+| POST | `/ingest` | Ingest GitHub repository to vector DB |
+| POST | `/ingest/single` | Ingest single uploaded file |
+| GET | `/ingest/status` | Get ingestion status |
+| POST | `/ask` | Ask question (uses repo content) |
+| POST | `/ask/single` | Ask about single file only |
+| POST | `/rag/query` | Direct RAG query |
+| POST | `/ask/voice` | Voice question (Phase 6) |
+
+---
+
+## 🧪 Testing Commands
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Validate repository
+curl -X POST "http://localhost:8000/validate-repo" \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "microsoft/vscode"}'
+
+# Ingest repository
+curl -X POST "http://localhost:8000/ingest" \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "microsoft/vscode", "extensions": [".md", ".py"]}'
+
+# Ask question
+curl -X POST "http://localhost:8000/ask" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is merge sort?"}'
+
+# RAG query only
+curl -X POST "http://localhost:8000/rag/query?query=What+is+merge+sort"
+```
+
+---
+
+## 📝 License
+
+MIT License - feel free to use this project for learning or hackathons!
+
+---
+
+## 🙏 Acknowledgments
+
+- [FastAPI](https://fastapi.tiangolo.com) - Modern Python web framework
+- [Pinecone](https://pinecone.io) - Vector database
+- [Google Gemini](https://gemini.google.com) - AI language model
+- [Sentence-Transformers](https://sbert.net) - Embedding models
+- [Next.js](https://nextjs.org) - React framework
+
+---
+
+<div align="center">
+
+**Built with ❤️ for the Gemini Live Agent Hackathon**
+
+</div>

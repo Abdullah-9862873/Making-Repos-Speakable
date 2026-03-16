@@ -148,6 +148,132 @@ class IngestResponse(BaseModel):
 # INGESTION ENDPOINTS (Phase 2 - IMPLEMENTED)
 # =============================================================================
 
+class ValidateRepoRequest(BaseModel):
+    """
+    Request model for validating GitHub repository.
+    """
+    repo: str
+
+
+class ValidateRepoResponse(BaseModel):
+    """
+    Response model for validate-repo endpoint.
+    """
+    valid: bool
+    is_public: bool
+    repo: str
+    message: str
+    owner: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    stars: Optional[int] = None
+
+
+@app.post("/validate-repo", tags=["Ingestion"], response_model=ValidateRepoResponse)
+async def validate_repo(request: ValidateRepoRequest):
+    """
+    Validate GitHub repository (public/private check)
+    
+    Checks if the repository exists and whether it's public or private.
+    
+    Args:
+        request: ValidateRepoRequest with repo (owner/repo format)
+    
+    Returns:
+        ValidateRepoResponse with validation results
+    
+    Example:
+        POST /validate-repo
+        {
+            "repo": "microsoft/vscode"
+        }
+        
+        Response:
+        {
+            "valid": true,
+            "is_public": true,
+            "repo": "microsoft/vscode",
+            "message": "Public repository",
+            "owner": "microsoft",
+            "name": "vscode",
+            "description": "Code editing. redefined.",
+            "stars": 123456
+        }
+    """
+    import requests as httpx
+    
+    repo = request.repo.strip()
+    
+    # Clean up repo URL if user paste full URL
+    if "github.com/" in repo:
+        repo = repo.split("github.com/")[-1].strip("/")
+    
+    # Split owner/repo
+    parts = repo.split("/")
+    if len(parts) != 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid repository format. Use 'owner/repo' format (e.g., 'microsoft/vscode')"
+        )
+    
+    owner, name = parts[0], parts[1]
+    
+    # Try to fetch repo info from GitHub
+    try:
+        response = httpx.get(
+            f"https://api.github.com/repos/{owner}/{name}",
+            headers={"Accept": "application/vnd.github.v3+json"},
+            timeout=10
+        )
+        
+        if response.status_code == 404:
+            return ValidateRepoResponse(
+                valid=False,
+                is_public=False,
+                repo=repo,
+                message="Repository not found. Please check the repository name."
+            )
+        
+        if response.status_code == 403:
+            # Rate limited or private (without token)
+            return ValidateRepoResponse(
+                valid=True,
+                is_public=False,
+                repo=repo,
+                message="Cannot verify visibility. This might be a private repository or rate limited. Please ensure the repository is public."
+            )
+        
+        if response.status_code == 200:
+            data = response.json()
+            is_public = not data.get("private", True)
+            
+            if is_public:
+                return ValidateRepoResponse(
+                    valid=True,
+                    is_public=True,
+                    repo=repo,
+                    message="Public repository found! You can ingest this repository.",
+                    owner=owner,
+                    name=name,
+                    description=data.get("description"),
+                    stars=data.get("stargazers_count", 0)
+                )
+            else:
+                return ValidateRepoResponse(
+                    valid=True,
+                    is_public=False,
+                    repo=repo,
+                    message="This is a private repository. Please enter a public repository."
+                )
+    
+    except Exception as e:
+        logger.error(f"Error validating repo: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error validating repository: {str(e)}"
+        )
+
+
 @app.post("/ingest", tags=["Ingestion"], response_model=IngestResponse)
 async def ingest_course(request: Optional[IngestRequest] = None):
     """

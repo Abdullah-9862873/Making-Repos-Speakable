@@ -1,9 +1,9 @@
 // =============================================================================
 // AI Multimodal Tutor - Main Page
 // =============================================================================
-// Phase: 5 - Frontend Development
-// Purpose: Main application page
-// Version: 5.0.0
+// Phase: 5 - Frontend Development (UPDATED)
+// Purpose: Main application page with GitHub repo validation
+// Version: 5.1.0
 // =============================================================================
 
 import { useState, useEffect } from 'react';
@@ -15,6 +15,19 @@ import FileUpload from '../components/FileUpload';
 import apiService, { AskResponse, HealthResponse } from '../lib/api';
 import styles from '../styles/Home.module.css';
 
+type Mode = 'repo' | 'single-file';
+
+interface ValidateResponse {
+  valid: boolean;
+  is_public: boolean;
+  repo: string;
+  message: string;
+  owner?: string;
+  name?: string;
+  description?: string;
+  stars?: number;
+}
+
 export default function Home() {
   // State
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -23,6 +36,13 @@ export default function Home() {
   const [response, setResponse] = useState<AskResponse | null>(null);
   const [error, setError] = useState<string>('');
   const [ingestStatus, setIngestStatus] = useState<any>(null);
+  
+  // New state for GitHub repo validation
+  const [repoUrl, setRepoUrl] = useState<string>('');
+  const [validateStatus, setValidateStatus] = useState<ValidateResponse | null>(null);
+  const [isValidating, setIsValidating] = useState<boolean>(false);
+  const [mode, setMode] = useState<Mode>('repo');
+  const [ingestedRepo, setIngestedRepo] = useState<string>('');
 
   // Check API connection on mount
   useEffect(() => {
@@ -48,7 +68,55 @@ export default function Home() {
     }
   };
 
+  const handleValidateRepo = async () => {
+    if (!repoUrl.trim()) {
+      setError('Please enter a GitHub repository URL');
+      return;
+    }
+
+    setIsValidating(true);
+    setError('');
+    setValidateStatus(null);
+
+    try {
+      const result = await apiService.validateRepo(repoUrl);
+      setValidateStatus(result);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to validate repository');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleIngest = async () => {
+    if (!validateStatus?.is_public) {
+      setError('Please validate a public repository first');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const result = await apiService.ingestCourse(repoUrl, ['.md', '.py', '.js', '.ts', '.txt', '.java', '.cpp', '.go', '.rs']);
+      alert(`Ingestion complete: ${result.message}`);
+      // Refresh status
+      const status = await apiService.getIngestStatus();
+      setIngestStatus(status);
+      setIngestedRepo(repoUrl);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to ingest course');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAskQuestion = async (question: string) => {
+    if (mode === 'repo' && !ingestStatus?.total_vectors) {
+      setError('Please ingest a GitHub repository first');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
     
@@ -73,24 +141,13 @@ export default function Home() {
 
   const handleFileSelect = (file: File) => {
     console.log('File selected:', file.name);
-    // For Phase 6 - handle file upload
+    // For Phase 6 - handle single file upload
   };
 
-  const handleIngest = async () => {
-    setIsLoading(true);
+  const switchMode = (newMode: Mode) => {
+    setMode(newMode);
+    setResponse(null);
     setError('');
-    
-    try {
-      const result = await apiService.ingestCourse();
-      alert(`Ingestion complete: ${result.message}`);
-      // Refresh status
-      const status = await apiService.getIngestStatus();
-      setIngestStatus(status);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to ingest course');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
@@ -129,8 +186,118 @@ export default function Home() {
           </div>
         )}
 
+        {/* Mode Switcher */}
+        <div className={styles.modeSwitcher}>
+          <button 
+            className={`${styles.modeButton} ${mode === 'repo' ? styles.modeActive : ''}`}
+            onClick={() => switchMode('repo')}
+          >
+            🔗 GitHub Repo
+          </button>
+          <button 
+            className={`${styles.modeButton} ${mode === 'single-file' ? styles.modeActive : ''}`}
+            onClick={() => switchMode('single-file')}
+          >
+            📄 Single File
+          </button>
+        </div>
+
+        {/* GitHub Repo Mode */}
+        {mode === 'repo' && (
+          <div className={styles.repoSection}>
+            <div className={styles.repoInputGroup}>
+              <label className={styles.repoLabel}>
+                Enter GitHub Repository URL:
+              </label>
+              <div className={styles.repoInputRow}>
+                <input
+                  type="text"
+                  className={styles.repoInput}
+                  placeholder="e.g., microsoft/vscode or https://github.com/microsoft/vscode"
+                  value={repoUrl}
+                  onChange={(e) => {
+                    setRepoUrl(e.target.value);
+                    setValidateStatus(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleValidateRepo();
+                    }
+                  }}
+                />
+                <button 
+                  className={styles.validateButton}
+                  onClick={handleValidateRepo}
+                  disabled={isValidating || !repoUrl.trim()}
+                >
+                  {isValidating ? '...' : '✓ Check'}
+                </button>
+              </div>
+            </div>
+
+            {/* Validation Status */}
+            {validateStatus && (
+              <div className={`${styles.validationStatus} ${validateStatus.is_public ? styles.validPublic : styles.validPrivate}`}>
+                {validateStatus.is_public ? (
+                  <>
+                    <span className={styles.validIcon}>✅</span>
+                    <span>
+                      <strong>{validateStatus.repo}</strong> - Public Repository
+                      {validateStatus.description && <span className={styles.repoDesc}>: {validateStatus.description}</span>}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.invalidIcon}>❌</span>
+                    <span>{validateStatus.message}</span>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Ingest Button */}
+            {validateStatus?.is_public && (
+              <button 
+                className={styles.ingestButton}
+                onClick={handleIngest}
+                disabled={isLoading || !isConnected}
+              >
+                {isLoading ? '⏳ Ingesting...' : '📥 Ingest This Repository'}
+              </button>
+            )}
+
+            {/* Ingested Info */}
+            {ingestedRepo && ingestStatus?.total_vectors > 0 && (
+              <div className={styles.ingestedInfo}>
+                ✅ <strong>{ingestedRepo}</strong> has been ingested! 
+                ({ingestStatus.total_vectors} vectors)
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Single File Mode */}
+        {mode === 'single-file' && (
+          <div className={styles.singleFileSection}>
+            <div className={styles.fileUploadNote}>
+              📄 Upload a single file to ask questions about it specifically.
+              This is useful when you want to understand a particular file in detail.
+            </div>
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              disabled={!isConnected}
+            />
+          </div>
+        )}
+
         {/* Info Bar */}
         <div className={styles.infoBar}>
+          <div className={styles.infoItem}>
+            <span className={styles.infoLabel}>Mode:</span>
+            <span className={styles.infoValue}>
+              {mode === 'repo' ? 'GitHub Repo' : 'Single File'}
+            </span>
+          </div>
           <div className={styles.infoItem}>
             <span className={styles.infoLabel}>Vectors:</span>
             <span className={styles.infoValue}>
@@ -143,13 +310,6 @@ export default function Home() {
               {health?.phase || 'Loading...'}
             </span>
           </div>
-          <button 
-            className={styles.ingestButton}
-            onClick={handleIngest}
-            disabled={isLoading || !isConnected}
-          >
-            📥 Ingest Course
-          </button>
         </div>
 
         {/* Response Display */}
@@ -174,10 +334,6 @@ export default function Home() {
           <div className={styles.inputTools}>
             <VoiceInput
               onVoiceInput={handleVoiceInput}
-              disabled={!isConnected}
-            />
-            <FileUpload
-              onFileSelect={handleFileSelect}
               disabled={!isConnected}
             />
           </div>
