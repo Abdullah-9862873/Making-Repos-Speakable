@@ -1,11 +1,3 @@
-// =============================================================================
-// AI Multimodal Tutor - Voice Input Component
-// =============================================================================
-// Phase: 5 - Frontend Development
-// Purpose: Voice input using Web Speech API
-// Version: 5.0.0
-// =============================================================================
-
 import React, { useState, useRef, useEffect } from 'react';
 import styles from '../styles/VoiceInput.module.css';
 
@@ -14,12 +6,6 @@ interface VoiceInputProps {
   disabled?: boolean;
 }
 
-/**
- * VoiceInput Component
- * 
- * Provides voice input functionality using the Web Speech API.
- * Allows users to speak their questions instead of typing.
- */
 const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, disabled = false }) => {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>('');
@@ -27,7 +13,6 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, disabled = false 
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Check if SpeechRecognition is available
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
@@ -35,13 +20,11 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, disabled = false 
       return;
     }
 
-    // Initialize SpeechRecognition
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = true;
     recognitionRef.current.lang = 'en-US';
 
-    // Handle results
     recognitionRef.current.onresult = (event: any) => {
       const current = event.resultIndex;
       const result = event.results[current];
@@ -55,14 +38,12 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, disabled = false 
       }
     };
 
-    // Handle errors
     recognitionRef.current.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       setError(`Error: ${event.error}`);
       setIsListening(false);
     };
 
-    // Handle end
     recognitionRef.current.onend = () => {
       setIsListening(false);
     };
@@ -103,9 +84,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, disabled = false 
         </span>
         {isListening ? 'Stop' : 'Voice'}
       </button>
-      
       {error && <div className={styles.error}>{error}</div>}
-      
       {transcript && (
         <div className={styles.transcript}>
           &quot;{transcript}&quot;

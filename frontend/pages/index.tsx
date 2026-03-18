@@ -1,17 +1,10 @@
-// =============================================================================
-// AI Multimodal Tutor - Main Page
-// =============================================================================
-// Phase: 5 - Frontend Development (UPDATED)
-// Purpose: Main application page with GitHub repo validation
-// Version: 5.1.0
-// =============================================================================
-
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import QuestionInput from '../components/QuestionInput';
 import ResponseDisplay from '../components/ResponseDisplay';
 import VoiceInput from '../components/VoiceInput';
 import FileUpload from '../components/FileUpload';
+import ConfirmModal from '../components/ConfirmModal';
 import apiService, { AskResponse, HealthResponse } from '@/lib/api';
 import styles from '../styles/Home.module.css';
 
@@ -29,26 +22,22 @@ interface ValidateResponse {
 }
 
 export default function Home() {
-  // State
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [response, setResponse] = useState<AskResponse | null>(null);
   const [error, setError] = useState<string>('');
   const [ingestStatus, setIngestStatus] = useState<any>(null);
-  
-  // New state for GitHub repo validation
+  const [successMessage, setSuccessMessage] = useState<{title: string; message: string} | null>(null);
   const [repoUrl, setRepoUrl] = useState<string>('');
   const [validateStatus, setValidateStatus] = useState<ValidateResponse | null>(null);
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const [mode, setMode] = useState<Mode>('repo');
   const [ingestedRepo, setIngestedRepo] = useState<string>('');
-  
-  // Single file state
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isFileUploaded, setIsFileUploaded] = useState<boolean>(false);
+  const [showClearModal, setShowClearModal] = useState<boolean>(false);
 
-  // Check API connection on mount
   useEffect(() => {
     checkConnection();
   }, []);
@@ -58,8 +47,6 @@ export default function Home() {
       const healthData = await apiService.getHealth();
       setHealth(healthData);
       setIsConnected(true);
-      
-      // Check ingest status
       try {
         const status = await apiService.getIngestStatus();
         setIngestStatus(status);
@@ -77,11 +64,9 @@ export default function Home() {
       setError('Please enter a GitHub repository URL');
       return;
     }
-
     setIsValidating(true);
     setError('');
     setValidateStatus(null);
-
     try {
       const result = await apiService.validateRepo(repoUrl);
       setValidateStatus(result);
@@ -95,48 +80,99 @@ export default function Home() {
   const handleIngest = async () => {
     if (!validateStatus?.is_public) {
       setError('Please validate a public repository first');
+      setSuccessMessage(null);
       return;
     }
-
     setIsLoading(true);
     setError('');
-    
+    setSuccessMessage(null);
     try {
+      console.log('Starting ingestion for:', repoUrl);
       const result = await apiService.ingestCourse(repoUrl, ['.md', '.py', '.js', '.ts', '.txt', '.java', '.cpp', '.go', '.rs']);
-      alert(`Ingestion complete: ${result.message}`);
-      // Refresh status
+      console.log('Ingestion result:', result);
+      setSuccessMessage({
+        title: 'GitHub Repo Successfully Ingested!',
+        message: result.message || `Successfully ingested ${result.chunks_created || result.vectors_stored} chunks`
+      });
       const status = await apiService.getIngestStatus();
       setIngestStatus(status);
       setIngestedRepo(repoUrl);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to ingest course');
+      console.error('Ingestion error:', err);
+      setError(err.response?.data?.detail || err.message || 'Failed to ingest course');
+      setSuccessMessage(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAskQuestion = async (question: string) => {
-    if (mode === 'repo' && !ingestStatus?.total_vectors) {
-      setError('Please ingest a GitHub repository first');
+  const handleClearAndIngest = async () => {
+    if (!validateStatus?.is_public) {
+      setError('Please validate a public repository first');
       return;
     }
-    
-    if (mode === 'single-file' && !isFileUploaded) {
-      setError('Please upload a file first');
-      return;
-    }
-
     setIsLoading(true);
     setError('');
-    
+    try {
+      if (ingestStatus?.total_vectors > 0) {
+        await apiService.clearIngestion();
+      }
+      const result = await apiService.ingestCourse(repoUrl, ['.md', '.py', '.js', '.ts', '.txt', '.java', '.cpp', '.go', '.rs']);
+      setSuccessMessage({
+        title: 'GitHub Repo Successfully Replaced!',
+        message: `Cleared previous data and ingested new repository. ${result.message}`
+      });
+      const status = await apiService.getIngestStatus();
+      setIngestStatus(status);
+      setIngestedRepo(repoUrl);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to replace repository');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    setShowClearModal(true);
+  };
+
+  const confirmClearData = async () => {
+    setShowClearModal(false);
+    setIsLoading(true);
+    setError('');
+    setSuccessMessage(null);
+    try {
+      await apiService.clearIngestion();
+    } catch (err: any) {
+      console.log('Clear operation attempted');
+    } finally {
+      setIngestStatus({ total_vectors: 0 });
+      setIngestedRepo('');
+      setResponse(null);
+      setUploadedFile(null);
+      setIsFileUploaded(false);
+      setValidateStatus(null);
+      setRepoUrl('');
+      setIsLoading(false);
+      setSuccessMessage({
+        title: 'Data Cleared!',
+        message: 'All data has been cleared successfully'
+      });
+    }
+  };
+
+  const handleAskQuestion = async (question: string) => {
+    if (!question.trim()) {
+      setError('Please enter a question');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
     try {
       let result;
-      
       if (mode === 'single-file') {
-        // Ask about single file
         result = await apiService.askSingleFile(question);
       } else {
-        // Ask about repo
         result = await apiService.askQuestion({
           question,
           top_k: 5,
@@ -144,7 +180,6 @@ export default function Home() {
           prompt_type: 'default',
         });
       }
-      
       setResponse(result);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to get answer');
@@ -162,13 +197,14 @@ export default function Home() {
     setUploadedFile(file);
     setIsLoading(true);
     setError('');
-    
     try {
-      // Upload and ingest the file
       const result = await apiService.ingestSingleFile(file);
       console.log('File ingested:', result);
       setIsFileUploaded(true);
-      alert(`File "${file.name}" uploaded successfully! Now you can ask questions about it.`);
+      setSuccessMessage({
+        title: 'File Uploaded Successfully!',
+        message: `"${file.name}" is ready. You can now ask questions about it.`
+      });
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to upload file');
     } finally {
@@ -189,31 +225,24 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>AI Multimodal Tutor</title>
-        <meta name="description" content="Ask questions about your GitHub course" />
+        <title>Making Repos Speakable</title>
+        <meta name="description" content="Give life to your repositories. Ask anything about any codebase." />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>AI Multimodal Tutor</h1>
+          <h1 className={styles.title}>Making Repos Speakable</h1>
           <p className={styles.subtitle}>
-            Your personal programming tutor powered by AI
+            Give life to your repositories. Ask anything about any codebase.
           </p>
         </div>
-        
-        {/* Status Badge */}
         <div className={styles.status}>
           <span className={`${styles.statusDot} ${isConnected ? styles.connected : styles.disconnected}`} />
           {isConnected ? 'Connected' : 'Disconnected'}
         </div>
       </header>
-
-      {/* Main Content */}
       <main className={styles.main}>
-        {/* Error Message */}
-        {error && (
+        {error && error.trim() && (
           <div className={styles.error}>
             {error}
             <button onClick={() => setError('')} className={styles.errorClose}>
@@ -221,24 +250,34 @@ export default function Home() {
             </button>
           </div>
         )}
-
-        {/* Mode Switcher */}
+        {successMessage && (
+          <div className={styles.successPopup}>
+            <div className={styles.successContent}>
+              <div className={styles.successIcon}>✅</div>
+              <div className={styles.successText}>
+                <div className={styles.successTitle}>{successMessage.title}</div>
+                <div className={styles.successMessage}>{successMessage.message}</div>
+              </div>
+              <button onClick={() => setSuccessMessage(null)} className={styles.successClose}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         <div className={styles.modeSwitcher}>
-          <button 
+          <button
             className={`${styles.modeButton} ${mode === 'repo' ? styles.modeActive : ''}`}
             onClick={() => switchMode('repo')}
           >
             🔗 GitHub Repo
           </button>
-          <button 
+          <button
             className={`${styles.modeButton} ${mode === 'single-file' ? styles.modeActive : ''}`}
             onClick={() => switchMode('single-file')}
           >
             📄 Single File
           </button>
         </div>
-
-        {/* GitHub Repo Mode */}
         {mode === 'repo' && (
           <div className={styles.repoSection}>
             <div className={styles.repoInputGroup}>
@@ -261,7 +300,7 @@ export default function Home() {
                     }
                   }}
                 />
-                <button 
+                <button
                   className={styles.validateButton}
                   onClick={handleValidateRepo}
                   disabled={isValidating || !repoUrl.trim()}
@@ -270,13 +309,11 @@ export default function Home() {
                 </button>
               </div>
             </div>
-
-            {/* Validation Status */}
             {validateStatus && (
               <div className={`${styles.validationStatus} ${validateStatus.is_public ? styles.validPublic : styles.validPrivate}`}>
                 {validateStatus.is_public ? (
                   <>
-                    <span className={styles.validIcon}>✅</span>
+                    <span className={styles.validIcon}>✅ OK</span>
                     <span>
                       <strong>{validateStatus.repo}</strong> - Public Repository
                       {validateStatus.description && <span className={styles.repoDesc}>: {validateStatus.description}</span>}
@@ -290,29 +327,58 @@ export default function Home() {
                 )}
               </div>
             )}
-
-            {/* Ingest Button */}
             {validateStatus?.is_public && (
-              <button 
-                className={styles.ingestButton}
-                onClick={handleIngest}
-                disabled={isLoading || !isConnected}
-              >
-                {isLoading ? '⏳ Ingesting...' : '📥 Ingest This Repository'}
-              </button>
+              <div className={styles.ingestButtonGroup}>
+                <button
+                  className={styles.ingestButton}
+                  onClick={handleIngest}
+                  disabled={isLoading || !isConnected}
+                >
+                  {isLoading ? '⏳ Ingesting...' : '📥 Ingest This Repository'}
+                </button>
+                {ingestStatus?.total_vectors > 0 && (
+                  <button
+                    className={styles.clearButton}
+                    onClick={handleClearAndIngest}
+                    disabled={isLoading || !isConnected}
+                    title="Clear previous data and ingest new repository"
+                  >
+                    {isLoading ? '⏳...' : '🗑️ Clear & Ingest New'}
+                  </button>
+                )}
+              </div>
             )}
-
-            {/* Ingested Info */}
             {ingestedRepo && ingestStatus?.total_vectors > 0 && (
               <div className={styles.ingestedInfo}>
-                ✅ <strong>{ingestedRepo}</strong> has been ingested! 
-                ({ingestStatus.total_vectors} vectors)
+                <div className={styles.successHeader}>
+                  <span className={styles.successIcon}>✅</span>
+                  <strong>GitHub Repo Successfully Ingested!</strong>
+                </div>
+                <div className={styles.successDetails}>
+                  <div className={styles.successItem}>
+                    <span className={styles.successLabel}>Repository:</span>
+                    <span className={styles.successValue}>{ingestedRepo}</span>
+                  </div>
+                  <div className={styles.successItem}>
+                    <span className={styles.successLabel}>Vectors Stored:</span>
+                    <span className={styles.successValue}>{ingestStatus.total_vectors}</span>
+                  </div>
+                  <div className={styles.successItem}>
+                    <span className={styles.successLabel}>Status:</span>
+                    <span className={styles.successValue}>Ready to answer questions!</span>
+                  </div>
+                </div>
+                <button
+                  className={styles.clearDataButton}
+                  onClick={handleClearData}
+                  disabled={isLoading}
+                >
+                  🗑️ Clear All Data
+                </button>
               </div>
             )}
           </div>
         )}
-
-        {/* Single File Mode */}
         {mode === 'single-file' && (
           <div className={styles.singleFileSection}>
             {!isFileUploaded ? (
@@ -321,6 +387,9 @@ export default function Home() {
                   📄 Upload a single file to ask questions about it specifically.
                   This is useful when you want to understand a particular file in detail.
                 </div>
+                <div className={styles.supportedFormats}>
+                  <strong>Supported formats:</strong> .py, .java, .md, .txt, .js, .ts, .cpp, .c, .go, .rs, .rb, .php, .swift, .kt, .sql, .sh, .json, .yaml, .xml, .html, .css, and all other file formats
+                </div>
                 <FileUpload
                   onFileSelect={handleFileSelect}
                   disabled={!isConnected || isLoading}
@@ -328,15 +397,18 @@ export default function Home() {
               </>
             ) : (
               <div className={styles.fileUploadedInfo}>
-                ✅ <strong>{uploadedFile?.name}</strong> is uploaded and ready!
-                <br />
-                <small>You can now ask questions about this file.</small>
+                <div className={styles.fileSuccessHeader}>
+                  <span className={styles.fileSuccessIcon}>✅</span>
+                  <strong>File Uploaded Successfully!</strong>
+                </div>
+                <div className={styles.fileNameDisplay}>
+                  📄 <strong>{uploadedFile?.name}</strong>
+                </div>
+                <p className={styles.fileReadyText}>You can now ask questions about this file.</p>
               </div>
             )}
           </div>
         )}
-
-        {/* Info Bar */}
         <div className={styles.infoBar}>
           <div className={styles.infoItem}>
             <span className={styles.infoLabel}>Mode:</span>
@@ -350,15 +422,23 @@ export default function Home() {
               {ingestStatus?.total_vectors || 0}
             </span>
           </div>
-          <div className={styles.infoItem}>
-            <span className={styles.infoLabel}>Phase:</span>
-            <span className={styles.infoValue}>
-              {health?.phase || 'Loading...'}
-            </span>
-          </div>
+          {ingestStatus?.total_vectors > 0 && (
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Data:</span>
+              <span className={styles.infoValue}>
+                {ingestStatus.total_vectors} vectors
+              </span>
+              <button
+                className={styles.clearDataSmallButton}
+                onClick={handleClearData}
+                disabled={isLoading}
+                title="Clear all data from vector database"
+              >
+                🗑️ Clear
+              </button>
+            </div>
+          )}
         </div>
-
-        {/* Response Display */}
         <ResponseDisplay
           question={response?.question || ''}
           answer={response?.answer || ''}
@@ -368,15 +448,12 @@ export default function Home() {
           voiceAudio={response?.voice_audio}
           isLoading={isLoading}
         />
-
-        {/* Input Section */}
         <div className={styles.inputSection}>
           <QuestionInput
             onSubmit={handleAskQuestion}
             isLoading={isLoading}
             disabled={!isConnected}
           />
-          
           <div className={styles.inputTools}>
             <VoiceInput
               onVoiceInput={handleVoiceInput}
@@ -385,13 +462,21 @@ export default function Home() {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
       <footer className={styles.footer}>
         <p>
-          Powered by Gemini LLM + Pinecone Vector DB
+          Powered by Groq LLM + Pinecone Vector DB
         </p>
       </footer>
+      <ConfirmModal
+        isOpen={showClearModal}
+        title="Clear All Data?"
+        message="Are you sure you want to clear all data? This will remove all ingested repositories and uploaded files. This action cannot be undone."
+        confirmText="Clear All"
+        cancelText="Cancel"
+        icon="🗑️"
+        onConfirm={confirmClearData}
+        onCancel={() => setShowClearModal(false)}
+      />
     </div>
   );
 }

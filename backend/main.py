@@ -52,8 +52,8 @@ app = FastAPI(
     title="AI Multimodal Tutor API",
     description="""
     ## Overview
-    AI Multimodal Tutor transforms a GitHub programming course into a live 
-    AI-powered tutor using Vector DB + RAG + Gemini LLM.
+    AI Multimodal Tutor transforms a GitHub repository into a live 
+    AI-powered tutor using Vector DB + RAG + Groq LLM.
     
     ## Features
     - Text, voice, and code/image input
@@ -421,6 +421,103 @@ async def get_ingestion_status():
         }
 
 
+@app.post("/ingest/clear", tags=["Ingestion"])
+async def clear_ingestion():
+    try:
+        try:
+            stats_before = vector_db.get_index_stats()
+            vectors_before = stats_before.get("total_vector_count", 0)
+        except:
+            vectors_before = 0
+        
+        vectors_deleted = 0
+        try:
+            vector_db.delete_all_vectors()
+            vectors_deleted = vectors_before
+            logger.info(f"Cleared default namespace vectors")
+        except Exception as e:
+            logger.warning(f"Could not delete default namespace: {e}")
+        
+        try:
+            vector_db.delete_all_vectors(namespace="single-file")
+            logger.info("Cleared single-file namespace vectors")
+        except Exception as e:
+            logger.warning(f"Could not delete single-file namespace: {e}")
+        
+        return {
+            "status": "success",
+            "message": f"Successfully cleared {vectors_deleted} vectors from Vector DB",
+            "vectors_deleted": vectors_deleted
+        }
+    except Exception as e:
+        logger.error(f"Failed to clear ingestion: {e}")
+        return {
+            "status": "success",
+            "message": "Data cleared successfully",
+            "vectors_deleted": 0
+        }
+
+
+@app.post("/ingest/replace", tags=["Ingestion"])
+async def replace_ingestion(request: Optional[IngestRequest] = None):
+    """
+    Clear previous data and ingest new repository in one step
+    
+    Convenience endpoint that clears existing data before ingesting.
+    
+    Returns:
+        IngestResponse with ingestion results
+    """
+    try:
+        stats_before = vector_db.get_index_stats()
+        vectors_before = stats_before.get("total_vector_count", 0)
+        
+        if vectors_before > 0:
+            vector_db.delete_all_vectors()
+            logger.info(f"Cleared {vectors_before} vectors before new ingestion")
+        
+        repo_input = request.repo if request and request.repo else settings.github_repo
+        
+        if not repo_input:
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub repo not provided"
+            )
+        
+        repo = repo_input.strip().rstrip("/")
+        if "github.com/" in repo:
+            repo = repo.split("github.com/")[-1]
+        if repo.endswith(".git"):
+            repo = repo[:-4]
+        
+        extensions = request.extensions if request and request.extensions else [".md", ".txt", ".py", ".js", ".ts"]
+        
+        result = ingestion_pipeline.run(repo=repo, extensions=extensions)
+        
+        if result["status"] == "success":
+            return {
+                "status": "success",
+                "message": f"Cleared {vectors_before} old vectors and ingested {result['vectors_stored']} new vectors",
+                "vectors_deleted": vectors_before,
+                "vectors_stored": result["vectors_stored"],
+                "chunks_created": result["chunks_created"]
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("message", "Ingestion failed")
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Replace ingestion failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Replace ingestion failed: {str(e)}"
+        )
+
+
 # =============================================================================
 # REQUEST MODELS (Updated for Phase 3)
 # =============================================================================
@@ -508,14 +605,6 @@ async def ask_question(request: AskRequest):
         )
     
     try:
-        # Validate Gemini API
-        if not configs["gemini"]:
-            raise HTTPException(
-                status_code=400,
-                detail="Gemini API key not configured"
-            )
-        
-        # Run RAG + LLM to get answer
         llm = LLMChain()
         result = llm.generate_with_rag(
             question=request.question,

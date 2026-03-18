@@ -1,25 +1,11 @@
-# =============================================================================
-# AI Multimodal Tutor - Backend Package
-# =============================================================================
-# Phase: 4 - LLM Integration
-# Purpose: Package initialization file
-# Version: 4.0.0
-# =============================================================================
+from config import settings
+from vector_db import vector_db
+from embeddings import embedding_model
+from github_ingest import github_ingestor
+from ingestion_pipeline import ingestion_pipeline
+from rag_pipeline import RAGPipeline
+from llm_chain import llm_chain
+from multimodal import multimodal_generator
+from tts_service import tts_service
 
-"""
-AI Multimodal Tutor Backend
-
-This package contains all backend components:
-- config: Configuration management
-- vector_db: Pinecone Vector DB operations
-- embeddings: Sentence transformer embeddings
-- github_ingest: GitHub repository ingestion (public repos only)
-- ingestion_pipeline: Complete ingestion workflow
-- rag_pipeline: Retrieval-Augmented Generation pipeline
-- prompt_templates: Prompt templates for RAG + LLM
-- llm_chain: Gemini LLM integration
-- multimodal: Multimodal output generator
-- tts_service: Text-to-Speech service
-"""
-
-__version__ = "4.0.0"
+__version__ = "9.0.0"

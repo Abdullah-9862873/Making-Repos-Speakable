@@ -1,11 +1,3 @@
-# =============================================================================
-# AI Multimodal Tutor - Single File Processing
-# =============================================================================
-# Phase: 6 - Multimodal I/O Features
-# Purpose: Handle single file uploads for Q&A
-# Version: 6.0.0
-# =============================================================================
-
 from typing import Dict, Any, Optional
 import logging
 import os
@@ -18,15 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class SingleFileProcessor:
-    """
-    Single File Processor for handling file uploads.
-    
-    This class processes uploaded files for Q&A:
-    - Reads file content
-    - Chunks content
-    - Generates embeddings
-    - Stores in a separate namespace for single file queries
-    """
     
     def __init__(self):
         self.embeddings = embedding_model
@@ -39,28 +22,14 @@ class SingleFileProcessor:
         file_name: str,
         file_extension: str
     ) -> Dict[str, Any]:
-        """
-        Process a single file for Q&A.
-        
-        Args:
-            file_content: Content of the file as string
-            file_name: Name of the file
-            file_extension: File extension (e.g., '.py', '.js')
-        
-        Returns:
-            Dictionary with processing results
-        """
         logger.info(f"Processing single file: {file_name}")
         
         try:
-            # Chunk the content
             chunks = self._chunk_content(file_content, file_name)
             
-            # Generate embeddings
             texts = [chunk["text"] for chunk in chunks]
             embeddings = self.embeddings.encode_batch(texts)
             
-            # Prepare vectors
             vectors = []
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 vector = {
@@ -78,7 +47,6 @@ class SingleFileProcessor:
                 }
                 vectors.append(vector)
             
-            # Upsert to vector DB with separate namespace
             self.vector_db.upsert_vectors(vectors, namespace=self.namespace)
             
             logger.info(f"Processed {len(vectors)} chunks from {file_name}")
@@ -98,23 +66,12 @@ class SingleFileProcessor:
             }
     
     def _chunk_content(self, content: str, file_name: str) -> list:
-        """
-        Chunk file content into smaller pieces.
-        
-        Args:
-            content: File content
-            file_name: Name of the file
-        
-        Returns:
-            List of chunks
-        """
         import re
         
         chunks = []
         chunk_size = 2000
         chunk_overlap = 200
         
-        # Split by paragraphs
         paragraphs = re.split(r"\n\n+", content)
         
         current_chunk = ""
@@ -141,22 +98,12 @@ class SingleFileProcessor:
         if current_chunk:
             chunks.append({"text": current_chunk.strip()})
         
-        # Add index
         for i, chunk in enumerate(chunks):
             chunk["index"] = i
         
         return chunks
     
     def _detect_language(self, extension: str) -> str:
-        """
-        Detect programming language from file extension.
-        
-        Args:
-            extension: File extension
-        
-        Returns:
-            Language string
-        """
         ext_map = {
             ".py": "python",
             ".js": "javascript",
@@ -185,27 +132,14 @@ class SingleFileProcessor:
         question: str,
         top_k: int = 5
     ) -> Dict[str, Any]:
-        """
-        Query the single file content.
-        
-        Args:
-            question: User question
-            top_k: Number of results
-        
-        Returns:
-            Query results
-        """
-        # Generate embedding
         query_embedding = self.embeddings.encode_single(question)
         
-        # Search in single file namespace
         results = self.vector_db.query_vectors(
             query_vector=query_embedding,
             top_k=top_k,
             namespace=self.namespace
         )
         
-        # Extract contexts
         contexts = []
         for match in results.get("matches", []):
             contexts.append({
@@ -223,12 +157,6 @@ class SingleFileProcessor:
         }
     
     def clear_single_file(self) -> Dict[str, Any]:
-        """
-        Clear all single file content from vector DB.
-        
-        Returns:
-            Status dictionary
-        """
         try:
             self.vector_db.delete_all_vectors(namespace=self.namespace)
             return {"status": "success", "message": "Single file content cleared"}
@@ -236,7 +164,6 @@ class SingleFileProcessor:
             return {"status": "error", "message": str(e)}
 
 
-# Singleton instance
 single_file_processor = SingleFileProcessor()
 
 
@@ -244,18 +171,6 @@ def process_single_file(
     file_content: str,
     file_name: str
 ) -> Dict[str, Any]:
-    """
-    Process a single file for Q&A.
-    
-    Convenience function.
-    
-    Args:
-        file_content: Content of the file
-        file_name: Name of the file
-    
-    Returns:
-        Processing results
-    """
     import os
     _, ext = os.path.splitext(file_name)
     processor = SingleFileProcessor()
@@ -263,15 +178,5 @@ def process_single_file(
 
 
 def query_file(question: str, top_k: int = 5) -> Dict[str, Any]:
-    """
-    Query single file content.
-    
-    Args:
-        question: User question
-        top_k: Number of results
-    
-    Returns:
-        Query results
-    """
     processor = SingleFileProcessor()
     return processor.query_single_file(question, top_k)

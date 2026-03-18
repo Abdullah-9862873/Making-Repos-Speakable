@@ -1,9 +1,9 @@
 # =============================================================================
 # AI Multimodal Tutor - Backend Dependencies
 # =============================================================================
-# Phase: 7 - Integration & Testing
+# Phase: 8 - Hugging Face Migration
 # Purpose: Core backend dependencies for FastAPI, Vector DB, RAG, and LLM
-# Version: 7.0.0
+# Version: 8.0.0
 # =============================================================================
 
 # FastAPI & Server
@@ -18,7 +18,8 @@ slowapi>=0.1.9
 pinecone>=4.0.0
 
 # LLM & Embeddings
-google-generativeai>=0.5.3
+# Hugging Face Inference API (Primary LLM - Free)
+huggingface_hub>=0.20.0
 sentence-transformers>=2.4.0
 
 # Text-to-Speech (gTTS)

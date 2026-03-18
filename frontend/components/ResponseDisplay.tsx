@@ -1,11 +1,3 @@
-// =============================================================================
-// AI Multimodal Tutor - Response Display Component
-// =============================================================================
-// Phase: 5 - Frontend Development
-// Purpose: Display AI responses with code highlighting
-// Version: 5.0.0
-// =============================================================================
-
 import React, { useEffect, useRef } from 'react';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
@@ -26,16 +18,6 @@ interface ResponseDisplayProps {
   isLoading: boolean;
 }
 
-/**
- * ResponseDisplay Component
- * 
- * Displays the AI's response including:
- * - The original question
- * - Formatted answer text
- * - Syntax-highlighted code blocks
- * - Source references
- * - Voice playback (if available)
- */
 const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
   question,
   answer,
@@ -47,7 +29,6 @@ const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Play voice audio when available
   useEffect(() => {
     if (voiceAudio && audioRef.current) {
       const audioUrl = `data:audio/mp3;base64,${voiceAudio}`;
@@ -76,10 +57,10 @@ const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
     return (
       <div className={styles.container}>
         <div className={styles.empty}>
-          <h2>AI Multimodal Tutor</h2>
+          <h2>Making Repos Speakable</h2>
           <p>Ask a question to get started!</p>
           <p className={styles.hint}>
-            Make sure to ingest course content first using the ingest button.
+            Enter a GitHub repo URL, ingest it, and ask anything about the codebase.
           </p>
         </div>
       </div>
@@ -88,31 +69,21 @@ const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* Question */}
       <div className={styles.questionSection}>
         <div className={styles.label}>Question</div>
         <div className={styles.question}>{question}</div>
       </div>
-
-      {/* Answer */}
       <div className={styles.answerSection}>
         <div className={styles.label}>Answer</div>
-        
-        {/* Voice Playback */}
         {voiceAudio && (
           <button className={styles.voiceButton} onClick={playVoice}>
             <span className={styles.voiceIcon}>🔊</span>
             Play Voice
           </button>
         )}
-        
-        {/* Hidden audio element for playback */}
         <audio ref={audioRef} className={styles.hiddenAudio} controls />
-        
-        {/* Answer Text */}
         <div className={styles.answer}>
           {answer.split('```').map((part, index) => {
-            // Even indices are regular text, odd indices are code
             if (index % 2 === 0) {
               return (
                 <p key={index} className={styles.answerText}>
@@ -120,11 +91,9 @@ const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
                 </p>
               );
             }
-            return null; // Code blocks handled separately below
+            return null;
           })}
         </div>
-
-        {/* Code Blocks */}
         {hasCode && codeBlocks.length > 0 && (
           <div className={styles.codeSection}>
             <div className={styles.label}>Code Examples</div>
@@ -141,8 +110,6 @@ const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
             ))}
           </div>
         )}
-
-        {/* Sources */}
         {sources.length > 0 && (
           <div className={styles.sourcesSection}>
             <div className={styles.label}>Sources</div>

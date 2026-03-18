@@ -1,8 +1,9 @@
 .container {
-  background: white;
-  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #334155;
+  margin-bottom: 1.5rem;
 }
 
 .loading {
@@ -11,14 +12,14 @@
   justify-content: center;
   gap: 1rem;
   padding: 3rem;
-  color: #666;
+  color: #94a3b8;
 }
 
 .spinner {
   width: 24px;
   height: 24px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #4a90d9;
+  border: 3px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -30,18 +31,22 @@
 .empty {
   text-align: center;
   padding: 3rem;
-  color: #666;
+  color: #94a3b8;
 }
 
 .empty h2 {
   margin-bottom: 0.5rem;
-  color: #333;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.5rem;
 }
 
 .empty .hint {
   margin-top: 1rem;
   font-size: 0.9rem;
-  color: #888;
+  color: #64748b;
 }
 
 .questionSection,
@@ -52,28 +57,31 @@
 }
 
 .label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #888;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 0.5rem;
 }
 
 .question {
-  background: #f5f7fa;
-  padding: 1rem;
-  border-radius: 8px;
+  background: rgba(51, 65, 85, 0.5);
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
   font-weight: 500;
-  color: #333;
+  color: #e2e8f0;
+  border-left: 3px solid #3b82f6;
 }
 
 .answer {
-  line-height: 1.7;
+  line-height: 1.8;
+  color: #e2e8f0;
 }
 
 .answerText {
   margin-bottom: 1rem;
+  font-size: 1rem;
 }
 
 .voiceButton {
@@ -81,17 +89,20 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #4a90d9;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   margin-bottom: 1rem;
   font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
 .voiceButton:hover {
-  background: #3a7bc8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
 
 .hiddenAudio {
@@ -104,13 +115,14 @@
 
 .codeBlock {
   margin-bottom: 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  border: 1px solid #334155;
 }
 
 .sourcesSection {
   padding-top: 1rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #334155;
 }
 
 .sources {
@@ -120,9 +132,10 @@
 }
 
 .source {
-  background: #e8f4fd;
-  color: #4a90d9;
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }

@@ -1,11 +1,3 @@
-// =============================================================================
-// AI Multimodal Tutor - File Upload Component
-// =============================================================================
-// Phase: 5 - Frontend Development
-// Purpose: Upload code files or screenshots
-// Version: 5.0.0
-// =============================================================================
-
 import React, { useState, useRef } from 'react';
 import styles from '../styles/FileUpload.module.css';
 
@@ -15,17 +7,10 @@ interface FileUploadProps {
   accept?: string;
 }
 
-/**
- * FileUpload Component
- * 
- * Provides file upload functionality for:
- * - Code snippets (.py, .js, .ts, .java, etc.)
- * - Screenshots (.png, .jpg, .jpeg)
- */
 const FileUpload: React.FC<FileUploadProps> = ({
   onFileSelect,
   disabled = false,
-  accept = '.py,.js,.ts,.java,.cpp,.c,.go,.rs,.txt,.md,.png,.jpg,.jpeg',
+  accept = '*',
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('');
@@ -37,7 +22,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
     setFileName(file.name);
 
-    // Create preview for images
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -45,7 +29,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
       };
       reader.readAsDataURL(file);
     } else {
-      // For code files, read as text
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreview(e.target?.result as string);
@@ -78,7 +61,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         disabled={disabled}
         className={styles.hiddenInput}
       />
-      
       <button
         className={styles.uploadButton}
         onClick={handleClick}
@@ -87,7 +69,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <span className={styles.uploadIcon}>📎</span>
         Upload
       </button>
-
       {fileName && (
         <div className={styles.fileInfo}>
           <span className={styles.fileName}>{fileName}</span>
@@ -96,7 +77,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
           </button>
         </div>
       )}
-
       {preview && (
         <div className={styles.preview}>
           {fileName.match(/\.(png|jpg|jpeg)$/i) ? (

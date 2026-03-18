@@ -1,11 +1,3 @@
-# =============================================================================
-# AI Multimodal Tutor - GitHub Repository Ingestion
-# =============================================================================
-# Phase: 2 - Backend Core Components
-# Purpose: Fetch content from GitHub repo and prepare for vectorization
-# Version: 8.1.0 (Robust ZIP + Sanitization)
-# =============================================================================
-
 import requests
 import re
 import io
@@ -15,15 +7,10 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from config import settings
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class GitHubIngestor:
-    """
-    GitHub Repository Content Ingestor.
-    Handles fetching content via ZIP download to avoid API rate limits.
-    """
     
     def __init__(self, repo: str = None):
         self._repo = ""
@@ -47,16 +34,12 @@ class GitHubIngestor:
             self._repo = ""
             return
             
-        # SANITIZATION LOGIC
         cleaned = value.strip().rstrip("/")
-        # Remove protocol and domain if present
         if "github.com/" in cleaned:
             cleaned = cleaned.split("github.com/")[-1]
-        # Remove .git suffix
         if cleaned.endswith(".git"):
             cleaned = cleaned[:-4]
             
-        # Ensure owner/repo format
         parts = cleaned.split("/")
         if len(parts) >= 2:
             self._repo = f"{parts[-2]}/{parts[-1]}"
@@ -66,7 +49,6 @@ class GitHubIngestor:
         logger.info(f"GitHubIngestor: Initialized with repo '{self._repo}' (original: '{value}')")
 
     def get_repo_info(self) -> Dict[str, Any]:
-        """Fetch repo metadata from GitHub API."""
         if not self.repo:
             raise ValueError("No repository specified")
             
@@ -76,7 +58,6 @@ class GitHubIngestor:
         return response.json()
 
     def chunk_content(self, content: str, chunk_size: int = None, chunk_overlap: int = None) -> List[Dict[str, Any]]:
-        """Split content into manageable chunks."""
         chunk_size = chunk_size or getattr(settings, "chunk_size", 500)
         chunk_overlap = chunk_overlap or getattr(settings, "chunk_overlap", 50)
         
@@ -103,7 +84,6 @@ class GitHubIngestor:
         return chunks
 
     def extract_metadata(self, file_path: str, content: str) -> Dict[str, Any]:
-        """Generate metadata for a file."""
         return {
             "source": file_path,
             "file_type": Path(file_path).suffix,
@@ -115,11 +95,9 @@ class GitHubIngestor:
         return ext_map.get(Path(file_path).suffix, "text")
 
     def fetch_and_chunk_repo(self, extensions: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """Download repo ZIP and process all matching files."""
         if not self.repo:
             raise ValueError("No repository specified for ingestion")
 
-        # 1. Detect branch
         branch = "main"
         try:
             info = self.get_repo_info()
@@ -127,7 +105,6 @@ class GitHubIngestor:
         except Exception as e:
             logger.warning(f"Branch detection failed for {self.repo}, using fallback 'main': {e}")
 
-        # 2. Download ZIP
         zip_url = f"https://github.com/{self.repo}/archive/refs/heads/{branch}.zip"
         logger.info(f"Downloading ZIP: {zip_url}")
         
@@ -140,11 +117,10 @@ class GitHubIngestor:
         if resp.status_code != 200:
             raise Exception(f"Failed to download repository {self.repo} (HTTP {resp.status_code}). URL: {zip_url}")
 
-        # 3. Process ZIP
         all_chunks = []
         with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
             for info in z.infolist():
-                if info.is_dir() or info.file_size > 1024 * 1024: # Skip dirs and files > 1MB
+                if info.is_dir() or info.file_size > 1024 * 1024:
                     continue
                 
                 if extensions and not any(info.filename.endswith(ext) for ext in extensions):

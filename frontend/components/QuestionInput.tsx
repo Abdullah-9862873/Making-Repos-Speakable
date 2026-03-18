@@ -1,11 +1,3 @@
-// =============================================================================
-// AI Multimodal Tutor - Question Input Component
-// =============================================================================
-// Phase: 5 - Frontend Development
-// Purpose: Text input for asking questions
-// Version: 5.0.0
-// =============================================================================
-
 import React, { useState, KeyboardEvent } from 'react';
 import styles from '../styles/QuestionInput.module.css';
 
@@ -15,12 +7,6 @@ interface QuestionInputProps {
   disabled?: boolean;
 }
 
-/**
- * QuestionInput Component
- * 
- * Provides a text input field for users to type their questions.
- * Supports submitting via Enter key or clicking the submit button.
- */
 const QuestionInput: React.FC<QuestionInputProps> = ({
   onSubmit,
   isLoading,
@@ -36,7 +22,6 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Submit on Enter (without shift)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -55,7 +40,6 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
           disabled={disabled || isLoading}
           rows={3}
         />
-        
         <button
           className={styles.submitButton}
           onClick={handleSubmit}
@@ -68,7 +52,6 @@ const QuestionInput: React.FC<QuestionInputProps> = ({
           )}
         </button>
       </div>
-      
       <div className={styles.hint}>
         Press Enter to submit, Shift+Enter for new line
       </div>
