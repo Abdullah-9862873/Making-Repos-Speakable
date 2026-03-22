@@ -14,7 +14,7 @@ An AI-powered application that transforms GitHub repositories into interactive, 
 
 ## Tech Stack
 
-### Frontend
+### Frontend 
 - **Next.js** - React framework
 - **TypeScript** - Type-safe JavaScript
 - **CSS Modules** - Scoped styling with dark theme UI
